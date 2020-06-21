@@ -1,9 +1,10 @@
 import React from 'react';
 import {
-  Route as ReactDOMRoute,
   RouteProps as ReactDOMRouteProps,
+  Route as ReactDOMRoute,
   Redirect,
 } from 'react-router-dom';
+
 import { useAuth } from '../hooks/auth';
 
 interface RouteProps extends ReactDOMRouteProps {
@@ -25,13 +26,13 @@ const Route: React.FC<RouteProps> = ({
         return isPrivate === !!user ? (
           <Component />
         ) : (
-          <Redirect
-            to={{
-              pathname: isPrivate ? '/' : '/dashboard',
-              state: { from: location },
-            }}
-          />
-        );
+            <Redirect
+              to={{
+                pathname: isPrivate ? '/' : '/dashboard',
+                state: { from: location },
+              }}
+            />
+          );
       }}
     />
   );

@@ -1,76 +1,92 @@
 import React, { createContext, useCallback, useState, useContext } from 'react';
+
 import api from '../services/api';
 
-interface AuthState {
-  token: string;
-  user: object;
+interface IUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url: string;
 }
 
-interface SignInCredentials {
+interface IAuthState {
+  token: string;
+  user: IUser;
+}
+interface ISignInCredentials {
   email: string;
   password: string;
 }
 
-interface AuthContextData {
-  user: object;
-  signIn(credentials: SignInCredentials): Promise<void>;
+interface IAuthContextData {
+  user: IUser;
+  signIn(credencials: ISignInCredentials): Promise<void>;
   signOut(): void;
+  updateUser(user: IUser): void;
 }
 
-const AuthContext = createContext<AuthContextData>({} as AuthContextData);
-
-const keyToken = '@GoBarber:token';
-const keyUser = '@GoBarber:user';
+const AuthContext = createContext<IAuthContextData>({} as IAuthContextData);
 
 const AuthProvider: React.FC = ({ children }) => {
-  const [data, setData] = useState<AuthState>(() => {
-    const token = localStorage.getItem(keyToken);
-    const user = localStorage.getItem(keyUser);
+  const [data, setData] = useState<IAuthState>(() => {
+    const token = localStorage.getItem('@GoBarber:token');
+    const user = localStorage.getItem('@Gobarber:user');
 
     if (token && user) {
+      api.defaults.headers.authorization = `Bearer ${token}`;
+
       return { token, user: JSON.parse(user) };
     }
 
-    return {} as AuthState;
+    return {} as IAuthState;
   });
 
   const signIn = useCallback(async ({ email, password }) => {
-    const response = await api.post('/sessions', {
+    const response = await api.post('sessions', {
       email,
       password,
     });
+
     const { token, user } = response.data;
 
-    localStorage.setItem(keyToken, token);
-    localStorage.setItem(keyUser, JSON.stringify(user));
+    localStorage.setItem('@GoBarber:token', token);
+    localStorage.setItem('@Gobarber:user', JSON.stringify(user));
+
+    api.defaults.headers.authorization = `Bearer ${token}`;
 
     setData({ token, user });
   }, []);
 
   const signOut = useCallback(() => {
-    localStorage.removeItem(keyToken);
-    localStorage.removeItem(keyUser);
-    setData({} as AuthState);
+    localStorage.removeItem('@GoBarber:token');
+    localStorage.removeItem('@Gobarber:user');
+
+    setData({} as IAuthState);
   }, []);
+
+  const updateUser = useCallback(
+    (user: IUser) => {
+      localStorage.setItem('@Gobarber:user', JSON.stringify(user));
+
+      setData({
+        token: data.token,
+        user,
+      });
+    },
+    [setData, data.token],
+  );
 
   return (
     <AuthContext.Provider
-      value={{
-        user: data.user,
-        signIn,
-        signOut,
-      }}
+      value={{ user: data.user, signIn, signOut, updateUser }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
 
-function useAuth(): AuthContextData {
+function useAuth(): IAuthContextData {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within a AuthProvider');
-  }
 
   return context;
 }
